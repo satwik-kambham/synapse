@@ -16,6 +16,7 @@ ENV PATH="/root/.local/bin/:$PATH"
 ADD . /app
 WORKDIR /app
 RUN uv sync --locked
+RUN uv pip install pip
 
 CMD ["/bin/bash"]
 # CMD ["uv", "run", "my_app"]

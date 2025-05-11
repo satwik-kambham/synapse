@@ -20,15 +20,8 @@
       devShell.${system} = pkgs.mkShell {
         packages = with pkgs; [
           ffmpeg
-          (pkgs.python3.withPackages (python-pkgs: with python-pkgs; [
-            python-lsp-server
-            flask
-            torch
-            numpy
-            transformers
-            accelerate
-            soundfile
-          ]))
+          espeak
+          uv
         ];
       };
     };
