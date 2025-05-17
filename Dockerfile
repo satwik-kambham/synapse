@@ -18,5 +18,5 @@ WORKDIR /app
 RUN uv sync --locked
 RUN uv pip install pip
 
-CMD ["/bin/bash"]
-# CMD ["uv", "run", "my_app"]
+# CMD ["/bin/bash"]
+CMD ["uv", "run", "flask", "--app", "main.py", "run"]
