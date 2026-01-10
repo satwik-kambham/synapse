@@ -18,6 +18,7 @@
       devShell.${system} = pkgs.mkShell {
         packages = with pkgs; [
           uv
+          ffmpeg
         ];
 
         LD_LIBRARY_PATH= "${pkgs.lib.makeLibraryPath nativeDeps}";
