@@ -9,10 +9,6 @@
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
-
-      nativeDeps = with pkgs; [
-        
-      ];
     in
     {
       devShell.${system} = pkgs.mkShell {
@@ -21,7 +17,9 @@
           ffmpeg
         ];
 
-        LD_LIBRARY_PATH= "${pkgs.lib.makeLibraryPath nativeDeps}";
+        LD_LIBRARY_PATH= pkgs.lib.makeLibraryPath [
+          "/run/opengl-driver"
+        ];
       };
     };
 }

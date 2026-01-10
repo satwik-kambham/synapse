@@ -1,22 +1,23 @@
 from __future__ import annotations
 
-import io
-import wave
+from pathlib import Path
 from typing import Tuple
+from uuid import uuid4
 
-from flask import Flask, Response, jsonify, request
+from flask import Flask, Response, jsonify, request, send_file
 
-from providers import DummySTTProvider, DummyTTSProvider, ProviderError, STTProvider, TTSProvider
+from providers import DummyTTSProvider, ProviderError, WhisperSTTProvider
 
 
 def create_app(
-    stt_provider: STTProvider | None = None,
-    tts_provider: TTSProvider | None = None,
+    upload_dir: Path | None = None,
 ) -> Flask:
     app = Flask(__name__)
 
-    stt = stt_provider or DummySTTProvider()
-    tts = tts_provider or DummyTTSProvider()
+    stt = WhisperSTTProvider()
+    tts = DummyTTSProvider()
+    uploads = upload_dir or Path("uploads")
+    uploads.mkdir(parents=True, exist_ok=True)
 
     @app.post("/stt")
     def stt_endpoint() -> Tuple[Response, int] | Response:
@@ -24,18 +25,12 @@ def create_app(
             return _json_error("file is required", 400)
 
         uploaded = request.files["file"]
-        if not _is_wav_mimetype(uploaded.mimetype):
-            return _json_error("file must be audio/wav", 400)
-
-        wav_bytes = uploaded.read()
-        if not _has_wav_header(wav_bytes):
-            return _json_error("file must be WAV", 400)
-
-        if not _can_decode_wav(wav_bytes):
-            return _json_error("unable to decode WAV", 422)
+        filename = f"{uuid4().hex}.wav"
+        file_path = uploads / filename
+        uploaded.save(file_path)
 
         try:
-            text = stt.transcribe(wav_bytes)
+            text = stt.transcribe(file_path)
         except ProviderError:
             return _json_error("stt provider failure", 500)
 
@@ -49,34 +44,17 @@ def create_app(
             return _json_error("text is required", 400)
 
         try:
-            wav_bytes = tts.synthesize(text)
+            file_path = tts.synthesize(text)
         except ProviderError:
             return _json_error("tts provider failure", 500)
 
-        if not _has_wav_header(wav_bytes) or not _can_decode_wav(wav_bytes):
-            return _json_error("tts provider returned invalid WAV", 500)
+        if not file_path.exists():
+            return _json_error("tts provider failure", 500)
 
-        return Response(wav_bytes, mimetype="audio/wav")
+        return send_file(file_path, mimetype="audio/wav")
 
     return app
 
 
 def _json_error(message: str, status_code: int) -> Tuple[Response, int]:
     return jsonify({"error": message}), status_code
-
-
-def _is_wav_mimetype(mimetype: str | None) -> bool:
-    return mimetype in {"audio/wav", "audio/x-wav", "audio/wave"}
-
-
-def _has_wav_header(wav_bytes: bytes) -> bool:
-    return len(wav_bytes) >= 12 and wav_bytes[:4] == b"RIFF" and wav_bytes[8:12] == b"WAVE"
-
-
-def _can_decode_wav(wav_bytes: bytes) -> bool:
-    try:
-        with wave.open(io.BytesIO(wav_bytes), "rb") as wav_file:
-            wav_file.getparams()
-        return True
-    except (wave.Error, EOFError, ValueError):
-        return False

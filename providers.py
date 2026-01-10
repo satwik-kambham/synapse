@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-import io
-import threading
-import wave
+from pathlib import Path
+
+import torch
+from transformers import pipeline
 
 
 class ProviderError(RuntimeError):
@@ -12,65 +13,38 @@ class ProviderError(RuntimeError):
 
 class STTProvider(ABC):
     @abstractmethod
-    def transcribe(self, wav_bytes: bytes) -> str:
+    def transcribe(self, file_path: Path) -> str:
         raise NotImplementedError
 
 
 class TTSProvider(ABC):
     @abstractmethod
-    def synthesize(self, text: str) -> bytes:
+    def synthesize(self, text: str) -> Path:
         raise NotImplementedError
 
 
-class _LazyLoadMixin:
-    def __init__(self) -> None:
-        self._load_lock = threading.Lock()
-        self._loaded = False
-
-    def _ensure_loaded(self) -> None:
-        if self._loaded:
-            return
-        with self._load_lock:
-            if self._loaded:
-                return
-            self._load()
-            self._loaded = True
-            self._warmup()
-
-    def _load(self) -> None:
-        pass
-
-    def _warmup(self) -> None:
-        pass
-
-
-class DummySTTProvider(_LazyLoadMixin, STTProvider):
-    def __init__(self, transcript: str = "") -> None:
+class WhisperSTTProvider(STTProvider):
+    def __init__(
+        self,
+        model: str = "openai/whisper-small.en",
+        chunk_length_s: int = 30,
+    ) -> None:
         super().__init__()
-        self._transcript = transcript
+        device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        self._pipe = pipeline(
+            "automatic-speech-recognition",
+            model=model,
+            chunk_length_s=chunk_length_s,
+            device=device,
+        )
 
-    def transcribe(self, wav_bytes: bytes) -> str:
-        self._ensure_loaded()
-        return self._transcript
-
-
-class DummyTTSProvider(_LazyLoadMixin, TTSProvider):
-    def __init__(self, sample_rate: int = 16000) -> None:
-        super().__init__()
-        self._sample_rate = sample_rate
-
-    def synthesize(self, text: str) -> bytes:
-        self._ensure_loaded()
-        return _silence_wav(sample_rate=self._sample_rate, duration_sec=1.0)
+    def transcribe(self, file_path: Path) -> str:
+        try:
+            return self._pipe(str(file_path))["text"]
+        except (OSError, RuntimeError, ValueError, KeyError, TypeError) as exc:
+            raise ProviderError("whisper provider failure") from exc
 
 
-def _silence_wav(sample_rate: int, duration_sec: float) -> bytes:
-    frame_count = int(sample_rate * duration_sec)
-    silence = b"\x00\x00" * frame_count
-    buffer = io.BytesIO()
-    with wave.open(buffer, "wb") as wav_file:
-        wav_file.setnchannels(1)
-        wav_file.setsampwidth(2)
-        wav_file.setframerate(sample_rate)
-        wav_file.writeframes(silence)
-    return buffer.getvalue()
+class DummyTTSProvider(TTSProvider):
+    def synthesize(self, text: str) -> Path:
+        return Path("nonexistent.wav")
