@@ -1,2 +1,3 @@
-# synapse
+# Synapse
+
 Inference Server (STT, TTS, ...)
