@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
+import tempfile
 
 import torch
+from supertonic import TTS
 from transformers import pipeline
 
 
@@ -46,5 +48,20 @@ class WhisperSTTProvider(STTProvider):
 
 
 class DummyTTSProvider(TTSProvider):
+    def __init__(self, voice_style: str = "M1") -> None:
+        super().__init__()
+        self._tts = TTS()
+        self._style = self._tts.get_voice_style(voice_style)
+
     def synthesize(self, text: str) -> Path:
-        return Path("nonexistent.wav")
+        try:
+            wav, _ = self._tts.synthesize(text, self._style)
+            with tempfile.NamedTemporaryFile(
+                suffix=".wav",
+                delete=False,
+            ) as tmp:
+                output_path = Path(tmp.name)
+            self._tts.save_audio(wav, str(output_path))
+            return output_path
+        except (OSError, RuntimeError, ValueError, TypeError) as exc:
+            raise ProviderError("tts provider failure") from exc
