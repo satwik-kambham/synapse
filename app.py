@@ -6,7 +6,12 @@ from uuid import uuid4
 
 from flask import Flask, Response, jsonify, request, send_file
 
-from providers import DummyTTSProvider, ProviderError, WhisperSTTProvider
+from providers import (
+    DummyTTSProvider,
+    ProviderError,
+    WhisperSTTProvider,
+    WhisperTurboSTTProvider,
+)
 
 
 def create_app(
