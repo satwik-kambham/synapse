@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Tuple
 from uuid import uuid4
 
-from flask import Flask, Response, jsonify, request, send_file
+from flask import Flask, Response, after_this_request, jsonify, request, send_file
 
 from providers import (
     DummyTTSProvider,
@@ -55,6 +55,11 @@ def create_app(
 
         if not file_path.exists():
             return _json_error("tts provider failure", 500)
+
+        @after_this_request
+        def _cleanup_tmp_tts(response: Response) -> Response:
+            file_path.unlink(missing_ok=True)
+            return response
 
         return send_file(file_path, mimetype="audio/wav")
 
