@@ -7,7 +7,7 @@ from uuid import uuid4
 from flask import Flask, Response, after_this_request, jsonify, request, send_file
 
 from providers import (
-    DummyTTSProvider,
+    SuperTonicTTSProvider,
     ProviderError,
     WhisperSTTProvider,
     WhisperTurboSTTProvider,
@@ -20,7 +20,7 @@ def create_app(
     app = Flask(__name__)
 
     stt = WhisperSTTProvider()
-    tts = DummyTTSProvider()
+    tts = SuperTonicTTSProvider()
     uploads = upload_dir or Path("uploads")
     uploads.mkdir(parents=True, exist_ok=True)
 

@@ -82,7 +82,7 @@ class WhisperSTTProvider(STTProvider):
             raise ProviderError("whisper provider failure") from exc
 
 
-class DummyTTSProvider(TTSProvider):
+class SuperTonicTTSProvider(TTSProvider):
     def __init__(self, voice_style: str = "F3") -> None:
         super().__init__()
         self._tts = TTS()

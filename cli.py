@@ -4,7 +4,12 @@ import argparse
 import sys
 from pathlib import Path
 
-from providers import DummyTTSProvider, ProviderError, WhisperTurboSTTProvider, WhisperSTTProvider
+from providers import (
+    SuperTonicTTSProvider,
+    ProviderError,
+    WhisperTurboSTTProvider,
+    WhisperSTTProvider,
+)
 
 
 def _handle_stt(args: argparse.Namespace) -> int:
@@ -25,7 +30,7 @@ def _handle_stt(args: argparse.Namespace) -> int:
 
 
 def _handle_tts(args: argparse.Namespace) -> int:
-    provider = DummyTTSProvider()
+    provider = SuperTonicTTSProvider()
     try:
         output_path = provider.synthesize(args.text)
     except ProviderError:
