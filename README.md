@@ -14,6 +14,20 @@ Start the server:
 uv run main.py
 ```
 
+## Run with Docker
+
+Build the image:
+```bash
+docker build -t synapse .
+```
+
+Run the container:
+```bash
+docker run --rm -p 127.0.0.1:8000:8000 -p [::1]:8000:8000 -v synapse-uploads:/app/uploads synapse
+```
+
+Uploads persist in the `synapse-uploads` named volume.
+
 ## Connect to the server
 
 The server listens on `http://localhost:8000` by default.
